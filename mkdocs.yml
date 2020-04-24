@@ -1,0 +1,41 @@
+site_name: Pestle
+theme: readthedocs
+highlightjs: false
+extra_css: [extra.css]
+nav:
+    - Home: index.md
+    - Magento 2 Code Generation:
+        - Introduction: magento2-introduction.md
+        - Generate Full Module: magento2-generate-full-module.md
+        - Module Setup: magento2-module-setup.md
+
+        # Model, View, Controller
+        - Model, View, Controller: magento2-mvc.md
+
+        - Admin ACL & Menus: magento2-generate-acl.md
+        - Admin UI Components: magento2-generate-ui.md
+
+        # DI and Observers
+        - DI and Observers: magento2-di-observers.md
+
+        - Composer Packages: magento2-composer.md
+
+        # Other Commands
+        - Other Commands: magento2-others.md
+
+#    - Magento 2 Commands:
+#        - Introduction: magento2-other-introduction.md
+#
+#        - Quick Conversions: magento2-quick-conversions.md
+#
+#        - Scans & Reports: magento2-scans-and-reports.md
+#
+#        - Other Commands: magento2-other-other.md
+
+    - Pestle Modules:
+        - Generate a Module: pestle-generate.md
+        - Input, Output, Arguments, Options: pestle-io.md
+    - Development:
+        - Setting Up a Dev Enviornment: dev-internals-enviornment.md
+        - Building Pestle: dev-internals-build.md
+        - Theory of Operation: dev-internals-pestle-import.md

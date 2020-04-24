@@ -3,6 +3,7 @@ namespace Pulsestorm\Magento2\Cli\Magento2\Generate\Full_Module;
 use function Pulsestorm\Pestle\Importer\pestle_import;
 pestle_import('Pulsestorm\Pestle\Library\output');
 pestle_import('Pulsestorm\Magento2\Cli\Magento2\Generate\Ui\Form\createShortPluralModelName');
+pestle_import('Pulsestorm\Magento2\Cli\Library\getRelativeModulePath');
 
 function pharString($commandName, $pharName)
 {
@@ -14,9 +15,9 @@ function getShellScript($argv, $options)
     $packageName     = $argv['package_name'];//'Pulsestorm5';
     $moduleName      = $argv['module_name'];//'Pestleform5';
     $modelName       = $argv['model_name'];//'Thing5';
-    $modelNamePlural = createShortPluralModelName(implode('\\', 
+    $modelNamePlural = createShortPluralModelName(implode('\\',
         [$packageName, $moduleName, 'Model',$modelName]));
-    
+
     $modelNamePluralLowerCase = strToLower($modelNamePlural);
     $packageNameLowerCase     = strToLower($packageName);
     $moduleNameLowerCase      = strToLower($moduleName);
@@ -31,7 +32,7 @@ function getShellScript($argv, $options)
         $pharName = 'pestle_dev';
     }
 
-    $pathModule = 'app/code/'.$packageName . '/' . $moduleName;        
+    $pathModule = getRelativeModulePath($packageName, $moduleName);
     $script = '
 #!/bin/bash
 ' . pharString('magento2:generate:module',$pharName)              . $packageName . ' ' . $moduleName . ' 0.0.1
@@ -39,9 +40,9 @@ function getShellScript($argv, $options)
 ' . pharString('magento2:generate:acl',$pharName)                 . $fullModuleName . ' ' . $fullModuleName . '::' . $modelNamePluralLowerCase . '
 ' . pharString('magento2:generate:menu',$pharName)                . $fullModuleName . ' "" ' . $fullModuleName . '::' . $modelNamePluralLowerCase . ' ' . $fullModuleName . '::' . $modelNamePluralLowerCase . ' "' . $moduleName . ' ' . $modelNamePlural . '" ' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNamePluralLowerCase . '/index/index 10
 ' . pharString('magento2:generate:menu',$pharName)                . $fullModuleName . ' ' . $fullModuleName . '::' . $modelNamePluralLowerCase . ' ' . $fullModuleName . '::' . $modelNamePluralLowerCase . '_list ' . $fullModuleName . '::' . $modelNamePluralLowerCase . ' "' . $modelName . ' Objects" ' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNamePluralLowerCase . '/index/index 10
-' . pharString('magento2:generate:route',$pharName)                 . $fullModuleName . ' adminhtml ' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNamePluralLowerCase . ' Index Index    
+' . pharString('magento2:generate:route',$pharName)                 . $fullModuleName . ' adminhtml ' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNamePluralLowerCase . ' Index Index
 ' . pharString('magento2:generate:view',$pharName)                  . $fullModuleName . ' adminhtml ' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNamePluralLowerCase . '_index_index Main content.phtml 1column
-' . pharString('magento2:generate:ui:grid',$pharName)             . $fullModuleName . ' ' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNamePluralLowerCase . ' \'' . $packageName . '\\' . $moduleName . '\Model\ResourceModel\\' . $modelName . '\Collection\' ' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNameLowerCase . '_id
+' . pharString('magento2:generate:ui:grid',$pharName)             . $fullModuleName . ' ' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNamePluralLowerCase . ' \'' . $packageName . '\\' . $moduleName . '\Model\ResourceModel\\' . $modelName . '\Collection\' ' . $modelNameLowerCase . '_id
 ' . pharString('magento2:generate:ui:add-column-text',$pharName)  . $pathModule . '/view/adminhtml/ui_component/' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNamePluralLowerCase . '.xml title "Title"
 ' . pharString('magento2:generate:ui:form',$pharName)             . $fullModuleName . ' \'' . $packageName . '\\' . $moduleName . '\Model\\' . $modelName . '\' ' . $fullModuleName . '::' . $modelNamePluralLowerCase . '
 ' . pharString('magento2:generate:ui:add_to_layout',$pharName)    . $pathModule . '/view/adminhtml/layout/'.$packageNameLowerCase . '_' . $moduleNameLowerCase.'_'.$modelNamePluralLowerCase.'_index_index.xml content ' . $packageNameLowerCase . '_' . $moduleNameLowerCase . '_' . $modelNamePluralLowerCase . '
@@ -56,7 +57,7 @@ php bin/magento module:enable '.$fullModuleName.'
     {
         $script .= '
 php bin/magento setup:upgrade
-';    
+';
     }
     return $script;
 

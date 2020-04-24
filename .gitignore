@@ -7,3 +7,5 @@ test.php
 .idea
 .vscode
 modules/pulsestorm/parsing
+tags
+site/

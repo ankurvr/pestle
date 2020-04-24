@@ -4,6 +4,26 @@ use ReflectionFunction;
 use ReflectionClass;
 use function Pulsestorm\Xml_Library\formatXmlString;
 
+function loadJsonFromFile($file) {
+    return json_decode(
+        file_get_contents($file)
+    );
+}
+
+function fetchObjectPath($object, $path) {
+    $parts = explode('/', $path);
+    $value = null;
+
+    foreach($parts as $path) {
+        if(isset($object->{$path})) {
+            $object = $object->{$path};
+            $value = $object;
+        }
+    }
+
+    return $value;
+}
+
 function exitWithErrorMessage($message)
 {
     fwrite(STDERR, $message . "\n");
@@ -19,7 +39,7 @@ function getShortClassNameFromClass($class)
 function parseDocCommentAts($r)
 {
     $comment = $r->getDocComment();
-    $comment = preg_replace(['%^\*/%m', '%^/\*\*%m','%^\* %m','%^\*%m'], '', $comment);    
+    $comment = preg_replace(['%^\*/%m', '%^/\*\*%m','%^\* %m','%^\*%m'], '', $comment);
     $parts   = explode('@', $comment);
     array_shift($parts);
     $parsed  = [];
@@ -33,7 +53,7 @@ function parseDocCommentAts($r)
     $parsed = array_map(function($thing){
         return trim($thing);
     }, $parsed);
-    
+
     return $parsed;
 }
 
@@ -57,22 +77,22 @@ function getNewClassDeclaration($class, $extends, $include_start_bracket=true)
             $parts[] = $extends['full_class'] .';';
         }
     }
-        
-    $parts[] = "\n";    
-    
+
+    $parts[] = "\n";
+
     $parts[] = 'class';
     $parts[] = $class['class'];
     if($extends['class'])
     {
-        $parts[] = 'extends';    
-        $parts[] = $extends['class'];      
+        $parts[] = 'extends';
+        $parts[] = $extends['class'];
     }
-    $parts[] = "\n";    
+    $parts[] = "\n";
     if($include_start_bracket)
     {
-        $parts[] = "{";       
+        $parts[] = "{";
     }
-    
+
     return preg_replace('%^ *%m', '', implode(' ', $parts));
 }
 
@@ -112,6 +132,7 @@ function writeStringToFile($path, $contents)
     $path_backup = $path . '.' . uniqid() . '.bak.php';
     if(file_exists($path))
     {
+        output('Backing existing file: ' . $path_backup);
         copy($path, $path_backup);
     }
     file_put_contents($path, $contents);
@@ -132,7 +153,7 @@ function getDocCommentAsString($function)
 {
     $r = new ReflectionFunction($function);
     $lines = explode("\n", $r->getDocComment());
-    
+
     if(count($lines) > 2)
     {
         array_shift($lines);
@@ -141,7 +162,7 @@ function getDocCommentAsString($function)
             return trim(trim($line),"* ");
         }, $lines);
     }
-    
+
     return trim( implode("\n", $lines) );
 }
 
@@ -153,7 +174,7 @@ function isAboveRoot($path)
     array_unshift($parts, '/');
     $parts      = array_filter($parts,      __NAMESPACE__ . '\notEmpty');
     $parts_real = array_filter($parts_real, __NAMESPACE__ . '\notEmpty');
-    
+
     return count($parts) > count($parts_real);
 }
 
@@ -163,9 +184,9 @@ function notEmpty($item)
 }
 
 function inputRawPhp()
-{    
+{
     $handle = fopen ("php://stdin","r");
-    $line = fgets($handle);        
+    $line = fgets($handle);
     fclose($handle);
     return $line;
 }
@@ -177,6 +198,10 @@ function inputReadline($prompt=null)
         return readline();
     }
 
+    $parts = explode("\n", $prompt);
+    $prompt = array_pop($parts);
+    $preamble = implode("\n", $parts);
+    if($preamble) { echo $preamble,"\n"; }
     return readline($prompt);
 }
 
@@ -195,7 +220,7 @@ function input($string, $default='')
 {
     $prompt =  $string . " (".$default.")] ";
     if(!function_exists('readline'))
-    {   
+    {
         echo($prompt);
         $line = inputRawPhp();
     }
@@ -208,7 +233,7 @@ function input($string, $default='')
         return trim($line);
     }
     return $default;
-    
+
 }
 
 function inputOrIndex($question, $default, $argv, $index)
@@ -217,7 +242,7 @@ function inputOrIndex($question, $default, $argv, $index)
     {
         return $argv[$index];
     }
-    
+
     return input($question, $default);
 }
 
@@ -241,7 +266,7 @@ function output($string)
             continue;
         }
         echo $arg;
-    }    
+    }
     echo "\n";
 }
 
@@ -269,16 +294,16 @@ function parseDocBlockIntoParts($string)
 {
     $return = [
         'one-line'      => '',
-        'description'   => '',      
+        'description'   => '',
     ];
-    
+
     $lines = preg_split('%[\r\n]%', $string);
     $start_block = trim(array_shift($lines));
     if($start_block !== '/**')
     {
         return $return;
     }
-    
+
     while($line = array_shift($lines))
     {
         $line = cleanDocBlockLine($line);
@@ -288,7 +313,7 @@ function parseDocBlockIntoParts($string)
             break;
         }
         if(!$line) { continue;}
-        
+
         if(!$return['one-line'])
         {
             $return['one-line'] = $line;
@@ -303,7 +328,7 @@ function parseDocBlockIntoParts($string)
     $all = implode("\n",$lines);
     preg_match_all('%^.*?@([a-z0-1]+?)[ ](.+?$)%mix', $all, $matches, PREG_SET_ORDER);
     foreach($matches as $match)
-    {        
+    {
         $return[$match[1]][] = trim($match[2]);
     }
     return $return;
@@ -313,7 +338,7 @@ function parseArgvIntoCommandAndArgumentsAndOptions($argv)
 {
     $script  = array_shift($argv);
     $command = array_shift($argv);
-     
+
     $arguments = [];
     $options   = [];
     $length = count($argv);
@@ -323,16 +348,16 @@ function parseArgvIntoCommandAndArgumentsAndOptions($argv)
         if(isOption($arg))
         {
             $option = str_replace('--', '', $arg);
-            
+
             if(preg_match('%=$%', $option))
             {
-                $option = substr($option, 0, 
+                $option = substr($option, 0,
                     strlen($option)-1);
-                $option_value = $argv[$i+1];                    
-                $i++;                    
+                $option_value = $argv[$i+1];
+                $i++;
             }
             else if(preg_match('%=.%', $option))
-            {   
+            {
                 list($option, $option_value) = explode('=', $option, 2);
             }
             //the boolean options
@@ -347,19 +372,19 @@ function parseArgvIntoCommandAndArgumentsAndOptions($argv)
                 {
                     $option_value = $argv[$i+1];
                 }
-                $i++;                
+                $i++;
             }
-            
-            
+
+
             $options[$option] = $option_value;
-            
+
         }
         else
         {
             $arguments[] = $arg;
         }
     }
-    
+
     return [
         'command'   => $command,
         'arguments' => $arguments,
@@ -372,5 +397,5 @@ function parseArgvIntoCommandAndArgumentsAndOptions($argv)
 */
 function pestle_cli($argv)
 {
-    
+
 }

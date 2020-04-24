@@ -5,8 +5,8 @@ use function Pulsestorm\Pestle\Importer\pestle_import;
 function templateCommandClass($namespace, $module_name, $command_name)
 {
     $command_prefix = 'ps';
-    
-    $class_file_string = 
+
+    $class_file_string =
 '<?php
 namespace '.$namespace.'\\'.$module_name.'\Command;
 
@@ -25,7 +25,7 @@ class '.$command_name.' extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $output->writeln("Hello World");  
+        $output->writeln("Hello World");
     }
 } ';
     return $class_file_string;
@@ -37,28 +37,28 @@ function createNamespaceFromNamespaceAndCommandName($namespace_module, $command_
     {
         $parts = explode('_', $command_name);
         array_shift($parts);
-        
+
         $post_fix = implode(' ', $parts);
         $post_fix = ucwords($post_fix);
         $post_fix = str_replace(' ', '\\', $post_fix);
         $command_name = 'generate\\' . $post_fix;
     }
-    
+
     if(strpos($command_name,':') !== false)
     {
-        $parts = explode(':', $command_name);        
+        $parts = explode(':', $command_name);
         $post_fix = implode(' ', $parts);
         $post_fix = ucwords($post_fix);
         $post_fix = str_replace(' ', '\\', $post_fix);
         $command_name = $post_fix;
     }
-        
+
     $namespace_portion = str_replace(' ','_',
         ucwords(str_replace('_',' ',$command_name)));
     //$namespace = 'Pulsestorm\Magento2\Cli\\' . $namespace_portion;
     $namespace_module = trim($namespace_module, '\\');
     $namespace = $namespace_module . '\\' . $namespace_portion;
-    
+
     $namespace = str_replace('-', '', $namespace);
     return $namespace;
 }
@@ -99,6 +99,7 @@ function processNewColumnAttributes($array)
 
     $normalize_whitespace = "/\s+/";
     $attrs = preg_replace($normalize_whitespace, " ", $attrs);
+    $attrs = substr($attrs, 0, -3) . ' ]';
 
     return $attrs;
 }
@@ -121,10 +122,10 @@ function generateInstallSchemaAddComment($comment)
          )';
 }
 
-function generateInstallSchemaGetDefaultColumnId($table)
+function generateInstallSchemaGetDefaultColumnId($id_prefix)
 {
     $id = [
-        'name'          => $table . '_id',
+        'name'          => strtolower($id_prefix) . '_id',
         'type_constant' => '\Magento\Framework\DB\Ddl\Table::TYPE_INTEGER',
         'size'          => 'null',
         'attributes'    => ['identity' => true, 'nullable' => false, 'primary' => true, 'unsigned' => true],
@@ -135,7 +136,7 @@ function generateInstallSchemaGetDefaultColumnId($table)
 
 function generateInstallSchemaGetDefaultColumnTitle()
 {
-    $title = [        
+    $title = [
         'name'          => 'title',
         'type_constant' => '\Magento\Framework\DB\Ddl\Table::TYPE_TEXT',
         'size'          => 255,
@@ -147,13 +148,13 @@ function generateInstallSchemaGetDefaultColumnTitle()
 
 function generateInstallSchemaGetDefaultColumnCreationTime()
 {
-    $creation_time = [        
+    $creation_time = [
         'name'          => 'creation_time',
         'type_constant' => '\Magento\Framework\DB\Ddl\Table::TYPE_TIMESTAMP',
         'size'          => 'null',
         'attributes'    => ['nullable' => false, 'default' => '\Magento\Framework\DB\Ddl\Table::TIMESTAMP_INIT'],
         'comment'       => 'Creation Time'
-    ];            
+    ];
     return $creation_time;
 }
 
@@ -176,13 +177,13 @@ function generateInstallSchemaGetDefaultColumnIsAction()
         'type_constant' => '\Magento\Framework\DB\Ddl\Table::TYPE_SMALLINT',
         'size'          => 'null',
         'attributes'    => ['nullable' => false, 'default' => '1'],
-        'comment'       => 'Is Active'    
+        'comment'       => 'Is Active'
     ];
     return $is_active;
 }
-function generateInstallSchemaGetDefaultColumns($table)
+function generateInstallSchemaGetDefaultColumns($id_prefix)
 {
-    $id            = generateInstallSchemaGetDefaultColumnId($table);
+    $id            = generateInstallSchemaGetDefaultColumnId($id_prefix);
     $title         = generateInstallSchemaGetDefaultColumnTitle();
     $creation_time = generateInstallSchemaGetDefaultColumnCreationTime();
     $update_time   = generateInstallSchemaGetDefaultColumnUpdateTime();
@@ -190,11 +191,11 @@ function generateInstallSchemaGetDefaultColumns($table)
     return [$id, $title, $creation_time, $update_time, $is_active];
 }
 
-function generateInstallSchemaTable($table_name='', $columns=[], $comment='',$indent=false)
+function generateInstallSchemaTable($table_name='', $id_prefix='', $columns=[], $comment='',$indent=false)
 {
     $indent = $indent ? $indent : '        ';
     $block = $indent . '$table = ' . generateInstallSchemaNewTable($table_name);
-    $default_columns = generateInstallSchemaGetDefaultColumns($table_name);
+    $default_columns = generateInstallSchemaGetDefaultColumns($id_prefix);
     $columns = array_merge($default_columns, $columns);
     foreach($columns as $column)
     {
@@ -215,7 +216,7 @@ function templateRegistrationPhp($module_name, $type='MODULE')
         \Magento\Framework\Component\ComponentRegistrar::'.$type.',
         \''.$module_name.'\',
         __DIR__
-    );';    
+    );';
 }
 
 function createBasicClassContents($full_model_name, $method_name, $extends=false)
@@ -228,7 +229,7 @@ function createBasicClassContents($full_model_name, $method_name, $extends=false
     $contents .= 'class ' . $name ;
     $contents .= "\n" . '{' . "\n";
     $contents .= '    public function ' . $method_name . '($parameters)' . "\n";
-    $contents .= '    {' . "\n"; 
+    $contents .= '    {' . "\n";
     $contents .= '        var_dump(__METHOD__); exit;' . "\n";
     $contents .= '    }' . "\n";
     $contents .= '}' . "\n";
@@ -240,16 +241,23 @@ function templateInterface($interface, $functions=[])
     $class      = trim($interface, '\\');
     $parts      = explode('\\',$class);
     $name       = array_pop($parts);
+    $phpDoc = '/**'. "\n" .
+    ' * Interface ' . $name . "\n" .
+    ' *' . "\n" .
+    ' * @api' . "\n" .
+    ' */';
+
     $template   = '<' . '?' . 'php' . "\n" .
-    'namespace ' . implode('\\',$parts) . ";\n" . 
-    "interface $name \n{\n";
+    'namespace ' . implode('\\',$parts) . ";\n" .
+    "\n" .$phpDoc . "\n" .
+    "interface $name\n{\n";
     foreach($functions as $function)
     {
         $template .=
 '    function '.$function.'();' . "\n";
     }
-    $template   .= "}";    
-    
+    $template   .= "}";
+
     return $template;
 }
 
@@ -258,9 +266,9 @@ function templateMethod($accessLevel, $name, $docBlock='')
     return $docBlock . '
     '.$accessLevel.' function '.$name.'(<$params$>)
     {
-<$methodBody$>        
+<$methodBody$>
     }
-';    
+';
 }
 
 function createClassTemplateWithUse($class, $extends=false, $implements=false, $includeUse=false)
@@ -275,13 +283,19 @@ function createClassTemplate($class, $extends=false, $implements=false, $include
     $class = trim($class, '\\');
     $parts = explode('\\',$class);
     $name  = array_pop($parts);
-    
+    $phpDoc = '/**'. "\n" .
+    ' * Class ' . $name . "\n" .
+    ' */';
+
     $template = '<' . '?' . 'php' . "\n" .
     'namespace ' . implode('\\',$parts) . ";\n";
+    $template .= "\n";
+
     if($includeUse)
     {
-        $template .= '<$use$>' . "\n";
+        $template .= '<$use$>' . "\n\n";
     }
+    $template .= $phpDoc . "\n";
     $template .= "class $name";
     if($extends)
     {
@@ -289,9 +303,23 @@ function createClassTemplate($class, $extends=false, $implements=false, $include
     }
     if($implements)
     {
-        $template .= " implements $implements";
-    }    
-    $template .= "\n" . 
+        if (strpos($implements, ',') !== false) {
+            $implements = explode(',', $implements);
+            $i = count($implements);
+            $template .= " implements" . "\n";
+            foreach ($implements as $implement) {
+                $template .= '    ' . $implement;
+                if ($i - 1 > 0) {
+                    $template .= ',' . "\n";
+                    $i--;
+                }
+            }
+        }
+        else {
+            $template .= " implements $implements";
+        }
+    }
+    $template .= "\n" .
     '{' . '<$body$>' . '}' . "\n";
 
     return $template;
@@ -307,7 +335,7 @@ function getZendPsrLogLevelMap()
         'Zend_Log::WARN'    => 'Psr\Log\LogLevel::WARNING',     // Warning: warning conditions
         'Zend_Log::NOTICE'  => 'Psr\Log\LogLevel::NOTICE',      // Notice: normal but significant condition
         'Zend_Log::INFO'    => 'Psr\Log\LogLevel::INFO',        // Informational: informational messages
-        'Zend_Log::DEBUG'   => 'Psr\Log\LogLevel::DEBUG',       // Debug: debug messages    
+        'Zend_Log::DEBUG'   => 'Psr\Log\LogLevel::DEBUG',       // Debug: debug messages
     ];
 }
 
@@ -319,42 +347,34 @@ function createControllerClass($class, $area, $acl='ACL RULE HERE')
         $extends = '\Magento\Backend\App\Action';
     }
     $template = createControllerClassTemplate($class, $extends);
-    
+
     $context_hint  = '\Magento\Framework\App\Action\Context';
     if($area === 'adminhtml')
     {
         $context_hint = '\Magento\Backend\App\Action\Context';
-    }    
+    }
     $body = "\n";
     if($area === 'adminhtml')
     {
-        $body .= '    
-    const ADMIN_RESOURCE = \''.$acl.'\';       
-        ';        
-    }    
+        $body .= '
+    const ADMIN_RESOURCE = \''.$acl.'\';
+';
+    }
     $body .= '
     protected $resultPageFactory;
     public function __construct(
         ' . $context_hint . ' $context,
         \Magento\Framework\View\Result\PageFactory $resultPageFactory)
     {
-        $this->resultPageFactory = $resultPageFactory;        
+        $this->resultPageFactory = $resultPageFactory;
         parent::__construct($context);
     }
-    
+
     public function execute()
     {
-        return $this->resultPageFactory->create();  
+        return $this->resultPageFactory->create();
     }';
-//     if($area === 'adminhtml')
-//     {
-//         $body .= '    
-//     protected function _isAllowed()
-//     {
-//         return $this->_authorization->isAllowed(\''.$acl.'\');
-//     }            
-//         ';        
-//     }
+
     $body .= "\n";
     return str_replace('<$body$>', $body, $template);
 }
@@ -364,9 +384,9 @@ function createControllerClassTemplate($class, $extends=false, $implements=false
     $class = trim($class, '\\');
     $parts = explode('\\',$class);
     $name  = array_pop($parts);
-    
+
     $template = '<' . '?' . 'php' . "\n" .
-    'namespace ' . implode('\\',$parts) . ";\n" . 
+    'namespace ' . implode('\\',$parts) . ";\n" .
     "class $name";
     if($extends)
     {
@@ -375,8 +395,8 @@ function createControllerClassTemplate($class, $extends=false, $implements=false
     if($implements)
     {
         $template .= " implements $implements";
-    }    
-    $template .= "\n" . 
+    }
+    $template .= "\n" .
     '{' . '<$body$>' . '}' . "\n";
 
     return $template;
